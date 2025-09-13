@@ -5,13 +5,11 @@ from pyformlang.finite_automaton import (
     State,
 )
 from typing import Set
-import pyformlang.regular_expression
+from pyformlang.regular_expression import Regex
 
 
 def regex_to_dfa(regex: str) -> DeterministicFiniteAutomaton:
-    return (
-        pyformlang.regular_expression.Regex(regex).to_epsilon_nfa().to_deterministic()
-    )
+    return Regex(regex).to_epsilon_nfa().to_deterministic()
 
 
 def graph_to_nfa(
