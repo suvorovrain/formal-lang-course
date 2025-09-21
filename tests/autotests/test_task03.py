@@ -9,7 +9,6 @@ import random
 import itertools
 from grammars_constants import REGEXES
 from rpq_concrete_cases import CASES_RPQ, CaseRPQ
-import sys
 
 # Fix import statements in try block to run tests
 try:
