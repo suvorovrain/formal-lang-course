@@ -23,15 +23,8 @@ class AdjacencyMatrixFA:
 
     def __init__(self, automaton: NondeterministicFiniteAutomaton):
         self.matrices: Dict[Symbol, csr_matrix] = {}
-        if isinstance(automaton.start_states, State):
-            self.start_states = {automaton.start_states}
-        else:
-            self.start_states = automaton.start_states
-
-        if isinstance(automaton.final_states, State):
-            self.final_states = {automaton.final_states}
-        else:
-            self.final_states = automaton.final_states
+        self.start_states = automaton.start_states
+        self.final_states = automaton.final_states
 
         idx = {s: i for i, s in enumerate(automaton.states)}
         self.state_index_map = idx
