@@ -40,16 +40,17 @@ class AdjacencyMatrixFA:
         tmp_mats: Dict[Symbol, lil_matrix] = {}
         fadict = automaton.to_dict()
         for src, trans in fadict.items():
-            for label, dests in trans.items():
+            for lbl, dests in trans.items():
                 if isinstance(dests, State):
                     dests = {dests}
                 for dest in dests:
                     i, j = idx[src], idx[dest]
-                    if label not in tmp_mats:
-                        tmp_mats[label] = lil_matrix(
-                            (self.n_states, self.n_states), dtype=bool
-                        )
-                    tmp_mats[label][i, j] = True
+                    if lbl is not None:
+                        if lbl not in tmp_mats:
+                            tmp_mats[lbl] = lil_matrix(
+                                (self.n_states, self.n_states), dtype=bool
+                            )
+                        tmp_mats[lbl][i, j] = True
         for lbl, M in tmp_mats.items():
             self.matrices[lbl] = M.tocsr()
 
@@ -105,19 +106,6 @@ class AdjacencyMatrixFA:
         return (src_vec @ closure @ fin_vec).nnz == 0
 
 
-def to_multidigraph_from_matrices(matrices: Dict[Symbol, csr_matrix]) -> MultiDiGraph:
-    if not matrices:
-        return MultiDiGraph()
-    n = next(iter(matrices.values())).shape[0]
-    graph = MultiDiGraph()
-    graph.add_nodes_from(range(n))
-    for sym, M in matrices.items():
-        coo = M.tocoo()
-        for u, v in zip(coo.row, coo.col):
-            graph.add_edge(int(u), int(v), label=sym)
-    return graph
-
-
 def pair_index(i: int, j: int, n2: int) -> int:
     return i * n2 + j
 
@@ -129,11 +117,12 @@ def intersect_automata(
     mats: Dict[Symbol, csr_matrix] = {}
     for lbl in common:
         mats[lbl] = kron(
-            automaton1.matrices[lbl].astype(bool), automaton2.matrices[lbl].astype(bool)
-        ).tocsr()
-    graph = to_multidigraph_from_matrices(mats)
+            automaton1.matrices[lbl].astype(bool),
+            automaton2.matrices[lbl].astype(bool),
+            format="csr",
+        )
 
-    n2 = automaton2.n_states
+    n1, n2 = automaton1.n_states, automaton2.n_states
     start_states = {
         pair_index(automaton1.state_index_map[s1], automaton2.state_index_map[s2], n2)
         for s1 in automaton1.start_states
@@ -145,7 +134,18 @@ def intersect_automata(
         for s2 in automaton2.final_states
     }
 
-    nfa = graph_to_nfa(graph, start_states=start_states, final_states=final_states)
+    nfa = NondeterministicFiniteAutomaton()
+    for idx in range(n1 * n2):
+        nfa.add_symbol(State(idx))
+    for idx in start_states:
+        nfa.add_start_state(State(idx))
+    for idx in final_states:
+        nfa.add_final_state(State(idx))
+    for lbl, M in mats.items():
+        coo = M.tocoo()
+        for u, v in zip(coo.row, coo.col):
+            nfa.add_transition(State(u), lbl, State(v))
+
     return AdjacencyMatrixFA(nfa)
 
 
